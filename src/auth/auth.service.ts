@@ -68,15 +68,25 @@ export class AuthService {
       select: { email: true, password: true, id: true, provider: true },
     });
 
-    if (!user)
-      throw new UnauthorizedException('Credentials are not valid (email)');
-    
-    console.log('user.provider ',user.provider)
-    if (user.provider !== 'local')
-      throw new UnauthorizedException('Use social login');
+    if (!user) {
+      throw new UnauthorizedException({
+        field: 'email',
+        message: 'El correo no está registrado',
+      });
+    }
 
-    if (!bcrypt.compareSync(password, user.password))
-      throw new UnauthorizedException('Credentials are not valid (password)');
+    if (user.provider !== 'local') {
+      throw new UnauthorizedException({
+        field: 'email',
+        message: 'Esta cuenta usa inicio de sesión social',
+      });
+    }
+
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      throw new UnauthorizedException({
+        message: 'Credenciales incorrectas',
+      });
+    }
 
     const { password: _, ...rest } = user;
 
