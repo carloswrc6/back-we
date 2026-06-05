@@ -103,8 +103,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid Google token format');
     }
 
-    const payload = await verifyGoogleToken(idToken);
-    if (!payload) {
+    let payload;
+    try {
+      payload = await verifyGoogleToken(idToken);
+    } catch (error) {
+      this.logger.warn(`Google token verification failed: ${error}`);
       throw new UnauthorizedException('Invalid Google token');
     }
 
