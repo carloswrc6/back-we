@@ -8,6 +8,8 @@ import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { LoginGoogleDto } from './dto/login-google.dto';
 import { LoginAppleDto } from './dto/login-apple.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -15,32 +17,38 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  createUser(@Body() createUserDto: CreateUserDto ) {
-    return this.authService.create( createUserDto );
+  createUser(@Body() createUserDto: CreateUserDto) {
+    return this.authService.create(createUserDto);
   }
 
   @Post('login')
-  loginUser(@Body() loginUserDto: LoginUserDto ) {
-    return this.authService.login( loginUserDto );
+  loginUser(@Body() loginUserDto: LoginUserDto) {
+    return this.authService.login(loginUserDto);
   }
 
   @Post('google')
   googleAuth(@Body() loginGoogleDto: LoginGoogleDto) {
     return this.authService.googleLogin(loginGoogleDto);
   }
-  
+
   @Post('apple')
   appleAuth(@Body() loginAppleDto: LoginAppleDto) {
     return this.authService.appleLogin(loginAppleDto);
   }
-  
+
   @Get('check-status')
   @Auth()
-  checkAuthStatus(
-    @GetUser() user: User
-  ) {
-    return this.authService.checkAuthStatus( user );
+  checkAuthStatus(@GetUser() user: User) {
+    return this.authService.checkAuthStatus(user);
   }
 
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
 
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.code, dto.password);
+  }
 }

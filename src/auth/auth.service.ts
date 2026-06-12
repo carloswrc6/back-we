@@ -14,6 +14,7 @@ import { LoginGoogleDto } from './dto/login-google.dto';
 import { LoginAppleDto } from './dto/login-apple.dto';
 import { verifyGoogleToken } from './helpers/google.helper';
 import { verifyAppleToken } from './helpers/apple.helper';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -22,8 +23,8 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   private getJwtToken(payload: JwtPayload) {
@@ -65,7 +66,13 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { email },
-      select: { fullName: true, email: true, password: true, id: true, provider: true },
+      select: {
+        fullName: true,
+        email: true,
+        password: true,
+        id: true,
+        provider: true,
+      },
     });
 
     if (!user) {
@@ -181,6 +188,62 @@ export class AuthService {
     return {
       ...rest,
       token: this.getJwtToken({ id: user.id }),
+    };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    const response = {
+      message:
+        'Si el correo existe, recibirás instrucciones para restablecer tu contraseña.',
+    };
+
+    if (!user || user.provider !== 'local') {
+      return response;
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    user.resetPasswordCode = code;
+
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.userRepository.save(user);
+
+    await this.mailService.sendResetPasswordEmail(user.email, code);
+
+    return response;
+  }
+
+  async resetPassword(email: string, code: string, password: string) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Código inválido o expirado');
+    }
+
+    if (user.resetPasswordCode !== code) {
+      throw new UnauthorizedException('Código inválido o expirado');
+    }
+
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      throw new UnauthorizedException('Código inválido o expirado');
+    }
+
+    user.password = bcrypt.hashSync(password, 10);
+
+    user.resetPasswordCode = null;
+    user.resetPasswordExpires = null;
+
+    await this.userRepository.save(user);
+
+    return {
+      message: 'Contraseña actualizada correctamente',
     };
   }
 }
