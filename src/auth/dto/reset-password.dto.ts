@@ -11,17 +11,17 @@ export class ResetPasswordDto {
   @IsString()
   @IsEmail()
   @ApiProperty({
-    description: 'User email',
+    description: 'Email del usuario',
     example: 'email@gmail.com',
   })
   email: string;
 
   @IsString()
   @Matches(/^\d{6}$/, {
-    message: 'The verification code must contain exactly 6 digits',
+    message: 'El código debe tener exactamente 6 dígitos',
   })
   @ApiProperty({
-    description: 'Code OPT',
+    description: 'Código de 6 dígitos enviado por correo',
     example: '123456',
   })
   code: string;
@@ -30,12 +30,12 @@ export class ResetPasswordDto {
   @MinLength(6)
   @MaxLength(50)
   @ApiProperty({
-    description: 'User password',
-    example: '********',
+    description: 'Nueva contraseña',
+    example: 'NuevaPass123!',
   })
   @Matches(/(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
     message:
-      'The password must have a Uppercase, lowercase letter and a number',
+      'La contraseña debe tener mayúscula, minúscula y un número',
   })
-  password: string;
+  newPassword: string;
 }

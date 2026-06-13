@@ -11,6 +11,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { Plan } from 'src/subscription/entities/plan.entity';
 import { Subscription } from 'src/subscription/entities/subscription.entity';
 import { MailModule } from 'src/mail/mail.module';
+import { CommonModule } from 'src/common/common.module';
 
 @Module({
   controllers: [AuthController],
@@ -38,6 +39,7 @@ import { MailModule } from 'src/mail/mail.module';
     }),
 
     MailModule,
+    CommonModule,
     // JwtModule.register({
     // secret: process.env.JWT_SECRET,
     // signOptions: {

@@ -45,15 +45,27 @@ export class User {
   roles: string[];
 
   @Column({
+    name: 'resetPasswordCode',
     nullable: true,
+    select: false,
   })
-  resetPasswordCode?: string;
+  resetPasswordToken?: string;
 
   @Column({
     nullable: true,
     type: 'timestamp',
   })
   resetPasswordExpires?: Date;
+
+  @Column('int', {
+    default: 0,
+  })
+  resetPasswordAttempts: number;
+
+  @Column('int', {
+    default: 0,
+  })
+  tokenVersion: number;
 
   @OneToMany(() => Product, (product) => product.user)
   product: Product;

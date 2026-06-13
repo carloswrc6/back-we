@@ -2,6 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import * as bcrypt from 'bcrypt';
 
@@ -15,16 +16,20 @@ import { LoginAppleDto } from './dto/login-apple.dto';
 import { verifyGoogleToken } from './helpers/google.helper';
 import { verifyAppleToken } from './helpers/apple.helper';
 import { MailService } from 'src/mail/mail.service';
+import { RateLimiterService } from 'src/common/rate-limiter.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger('AuthService');
+  private static readonly FORGOT_PASSWORD_LIMIT = 5;
+  private static readonly FORGOT_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly rateLimiterService: RateLimiterService,
   ) {}
 
   private getJwtToken(payload: JwtPayload) {
@@ -32,10 +37,46 @@ export class AuthService {
     return token;
   }
 
+  private checkForgotPasswordRateLimit(ip: string) {
+    this.rateLimiterService.consume(
+      `forgot-ip:${ip}`,
+      AuthService.FORGOT_PASSWORD_LIMIT,
+      AuthService.FORGOT_PASSWORD_WINDOW_MS,
+    );
+  }
+
+  private checkResetPasswordRateLimit(ip: string, email?: string) {
+    this.rateLimiterService.consume(
+      `reset-ip:${ip}`,
+      AuthService.FORGOT_PASSWORD_LIMIT,
+      AuthService.FORGOT_PASSWORD_WINDOW_MS,
+    );
+
+    if (email) {
+      this.rateLimiterService.consume(
+        `reset-email:${email}`,
+        AuthService.FORGOT_PASSWORD_LIMIT,
+        AuthService.FORGOT_PASSWORD_WINDOW_MS,
+      );
+    }
+  }
+
+  private registerFailedResetAttempt(user: User) {
+    user.resetPasswordAttempts = (user.resetPasswordAttempts || 0) + 1;
+
+    if (user.resetPasswordAttempts >= AuthService.FORGOT_PASSWORD_LIMIT) {
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      user.resetPasswordAttempts = 0;
+    }
+
+    this.userRepository.save(user);
+  }
+
   async checkAuthStatus(user: User) {
     return {
       ...user,
-      token: this.getJwtToken({ id: user.id }),
+      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
     };
   }
 
@@ -53,7 +94,10 @@ export class AuthService {
 
       return {
         ...user,
-        token: this.getJwtToken({ id: user.id }),
+        token: this.getJwtToken({
+          id: user.id,
+          tokenVersion: user.tokenVersion,
+        }),
       };
       // TODO: Retornar el JWT de acceso
     } catch (error) {
@@ -72,6 +116,7 @@ export class AuthService {
         password: true,
         id: true,
         provider: true,
+        tokenVersion: true,
       },
     });
 
@@ -99,7 +144,7 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id }),
+      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
     };
   }
 
@@ -140,7 +185,7 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id }),
+      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
     };
   }
 
@@ -187,58 +232,103 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id }),
+      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
     };
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, ip: string) {
+    const response = {
+      message: 'Si el correo está registrado, recibirás instrucciones',
+    };
+
+    const remoteIp = ip || 'unknown';
+    this.checkForgotPasswordRateLimit(remoteIp);
+
     const user = await this.userRepository.findOne({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        provider: true,
+        resetPasswordToken: true,
+      },
     });
-
-    const response = {
-      message:
-        'Si el correo existe, recibirás instrucciones para restablecer tu contraseña.',
-    };
 
     if (!user || user.provider !== 'local') {
       return response;
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = Math.floor(100000 + Math.random() * 900000)
+      .toString()
+      .padStart(6, '0');
+    const hashedCode = createHash('sha256').update(code).digest('hex');
 
-    user.resetPasswordCode = code;
-
+    user.resetPasswordToken = hashedCode;
     user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+    user.resetPasswordAttempts = 0;
 
     await this.userRepository.save(user);
-
     await this.mailService.sendResetPasswordEmail(user.email, code);
 
     return response;
   }
 
-  async resetPassword(email: string, code: string, password: string) {
+  async resetPassword(
+    email: string,
+    code: string,
+    password: string,
+    ip: string,
+  ) {
+    const remoteIp = ip || 'unknown';
+    this.checkResetPasswordRateLimit(remoteIp, email);
+
+    const hashedCode = createHash('sha256').update(code).digest('hex');
+
     const user = await this.userRepository.findOne({
       where: { email },
+      select: {
+        id: true,
+        password: true,
+        resetPasswordToken: true,
+        resetPasswordExpires: true,
+        resetPasswordAttempts: true,
+        tokenVersion: true,
+        email: true,
+        provider: true,
+      },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Código inválido o expirado');
+    const error = new UnauthorizedException('Código inválido o expirado');
+
+    if (!user || user.provider !== 'local') {
+      throw error;
     }
 
-    if (user.resetPasswordCode !== code) {
-      throw new UnauthorizedException('Código inválido o expirado');
+    if (
+      !user.resetPasswordToken ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires < new Date()
+    ) {
+      this.registerFailedResetAttempt(user);
+      throw error;
     }
 
-    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
-      throw new UnauthorizedException('Código inválido o expirado');
+    const storedHash = Buffer.from(user.resetPasswordToken, 'hex');
+    const receivedHash = Buffer.from(hashedCode, 'hex');
+    const isValidCode =
+      storedHash.length === receivedHash.length &&
+      timingSafeEqual(storedHash, receivedHash);
+
+    if (!isValidCode) {
+      this.registerFailedResetAttempt(user);
+      throw error;
     }
 
     user.password = bcrypt.hashSync(password, 10);
-
-    user.resetPasswordCode = null;
+    user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
+    user.resetPasswordAttempts = 0;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
 
     await this.userRepository.save(user);
 

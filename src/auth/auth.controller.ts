@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 
 import { AuthService } from './auth.service';
 import { GetUser, Auth } from './decorators';
@@ -43,12 +44,27 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+  forgotPassword(@Req() req: Request, @Body() dto: ForgotPasswordDto) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = typeof forwarded === 'string'
+      ? forwarded.split(',')[0].trim()
+      : req.ip;
+
+    return this.authService.forgotPassword(dto.email, ip);
   }
 
   @Post('reset-password')
-  resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto.email, dto.code, dto.password);
+  resetPassword(@Req() req: Request, @Body() dto: ResetPasswordDto) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = typeof forwarded === 'string'
+      ? forwarded.split(',')[0].trim()
+      : req.ip;
+
+    return this.authService.resetPassword(
+      dto.email,
+      dto.code,
+      dto.newPassword,
+      ip,
+    );
   }
 }
