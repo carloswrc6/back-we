@@ -11,6 +11,7 @@ import { LoginGoogleDto } from './dto/login-google.dto';
 import { LoginAppleDto } from './dto/login-apple.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GetLanguage } from 'src/common/decorators/get-language.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -23,8 +24,11 @@ export class AuthController {
   }
 
   @Post('login')
-  loginUser(@Body() loginUserDto: LoginUserDto) {
-    return this.authService.login(loginUserDto);
+  loginUser(@Body() loginUserDto: LoginUserDto,
+    @GetLanguage() language: string,
+) {
+    console.log('language xxx',language);
+    return this.authService.login(loginUserDto, language);
   }
 
   @Post('google')

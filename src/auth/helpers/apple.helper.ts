@@ -1,4 +1,5 @@
-import * as jwksClient from 'jwks-rsa';
+// import * as jwksClient from 'jwks-rsa';
+import jwksClient from 'jwks-rsa';
 import jwt from 'jsonwebtoken';
 
 const client = jwksClient({

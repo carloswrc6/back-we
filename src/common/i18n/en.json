@@ -1,0 +1,23 @@
+{
+  "auth": {
+    "login_success": "Login successful",
+    "invalid_credentials": "Invalid credentials",
+
+    "email_not_registered": "The email is not registered",
+    "social_login_required": "This account uses social login (Google or Apple)",
+
+    "invalid_google_token_format": "Invalid Google token format",
+    "invalid_google_token": "Invalid Google token",
+    "google_account_no_email": "Google account has no email",
+
+    "invalid_apple_token_format": "Invalid Apple token format",
+    "invalid_apple_token": "Invalid Apple token",
+    "account_registered_with_another_method": "This account is registered with another method",
+
+    "forgot_password_sent": "If the email is registered, you will receive instructions",
+
+    "reset_code_invalid_or_expired": "Invalid or expired code",
+
+    "password_updated_successfully": "Password updated successfully"
+  }
+}

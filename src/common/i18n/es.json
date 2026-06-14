@@ -1,0 +1,23 @@
+{
+  "auth": {
+    "login_success": "Inicio de sesión exitoso",
+    "invalid_credentials": "Credenciales incorrectas",
+
+    "email_not_registered": "El correo no está registrado",
+    "social_login_required": "Esta cuenta usa inicio de sesión social (Google o Apple)",
+
+    "invalid_google_token_format": "Formato de token de Google inválido",
+    "invalid_google_token": "Token de Google inválido",
+    "google_account_no_email": "La cuenta de Google no tiene correo electrónico",
+
+    "invalid_apple_token_format": "Formato de token de Apple inválido",
+    "invalid_apple_token": "Token de Apple inválido",
+    "account_registered_with_another_method": "Esta cuenta está registrada con otro método de acceso",
+
+    "forgot_password_sent": "Si el correo está registrado, recibirás instrucciones",
+
+    "reset_code_invalid_or_expired": "Código inválido o expirado",
+
+    "password_updated_successfully": "Contraseña actualizada correctamente"
+  }
+}

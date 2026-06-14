@@ -17,6 +17,7 @@ import { verifyGoogleToken } from './helpers/google.helper';
 import { verifyAppleToken } from './helpers/apple.helper';
 import { MailService } from 'src/mail/mail.service';
 import { RateLimiterService } from 'src/common/rate-limiter.service';
+import { I18nService } from 'src/common/services/i18n.service';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly rateLimiterService: RateLimiterService,
+    private readonly i18nService: I18nService,
   ) {}
 
   private getJwtToken(payload: JwtPayload) {
@@ -105,7 +107,23 @@ export class AuthService {
     }
   }
 
-  async login(loginUserDto: LoginUserDto) {
+  async login(loginUserDto: LoginUserDto, language: string) {
+    console.log('language', language);
+    const emailNotRegisteredMessage = this.i18nService.t(
+      'auth.email_not_registered',
+      language as any,
+    );
+
+    const socialLoginRequiredMessage = this.i18nService.t(
+      'auth.social_login_required',
+      language as any,
+    );
+
+    const invalidCredentialsMessage = this.i18nService.t(
+      'auth.invalid_credentials',
+      language as any,
+    );
+
     const { password, email } = loginUserDto;
 
     const user = await this.userRepository.findOne({
@@ -123,20 +141,20 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException({
         field: 'email',
-        message: 'El correo no está registrado',
+        message: emailNotRegisteredMessage,
       });
     }
 
     if (user.provider !== 'local') {
       throw new UnauthorizedException({
         field: 'email',
-        message: 'Esta cuenta usa inicio de sesión social',
+        message: socialLoginRequiredMessage,
       });
     }
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       throw new UnauthorizedException({
-        message: 'Credenciales incorrectas',
+        message: invalidCredentialsMessage,
       });
     }
 
