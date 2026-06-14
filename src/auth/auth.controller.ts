@@ -24,21 +24,27 @@ export class AuthController {
   }
 
   @Post('login')
-  loginUser(@Body() loginUserDto: LoginUserDto,
+  loginUser(
+    @Body() loginUserDto: LoginUserDto,
     @GetLanguage() language: string,
-) {
-    console.log('language xxx',language);
+  ) {
     return this.authService.login(loginUserDto, language);
   }
 
   @Post('google')
-  googleAuth(@Body() loginGoogleDto: LoginGoogleDto) {
-    return this.authService.googleLogin(loginGoogleDto);
+  googleAuth(
+    @Body() loginGoogleDto: LoginGoogleDto,
+    @GetLanguage() language: string,
+  ) {
+    return this.authService.googleLogin(loginGoogleDto, language);
   }
 
   @Post('apple')
-  appleAuth(@Body() loginAppleDto: LoginAppleDto) {
-    return this.authService.appleLogin(loginAppleDto);
+  appleAuth(
+    @Body() loginAppleDto: LoginAppleDto,
+    @GetLanguage() language: string,
+  ) {
+    return this.authService.appleLogin(loginAppleDto, language);
   }
 
   @Get('check-status')
@@ -48,27 +54,34 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  forgotPassword(@Req() req: Request, @Body() dto: ForgotPasswordDto) {
+  forgotPassword(
+    @Req() req: Request,
+    @Body() dto: ForgotPasswordDto,
+    @GetLanguage() language: string,
+  ) {
     const forwarded = req.headers['x-forwarded-for'];
-    const ip = typeof forwarded === 'string'
-      ? forwarded.split(',')[0].trim()
-      : req.ip;
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
 
-    return this.authService.forgotPassword(dto.email, ip);
+    return this.authService.forgotPassword(dto.email, ip, language);
   }
 
   @Post('reset-password')
-  resetPassword(@Req() req: Request, @Body() dto: ResetPasswordDto) {
+  resetPassword(
+    @Req() req: Request,
+    @Body() dto: ResetPasswordDto,
+    @GetLanguage() language: string,
+  ) {
     const forwarded = req.headers['x-forwarded-for'];
-    const ip = typeof forwarded === 'string'
-      ? forwarded.split(',')[0].trim()
-      : req.ip;
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
 
     return this.authService.resetPassword(
       dto.email,
       dto.code,
       dto.newPassword,
       ip,
+      language,
     );
   }
 }

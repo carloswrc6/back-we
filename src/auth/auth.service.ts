@@ -166,11 +166,25 @@ export class AuthService {
     };
   }
 
-  async googleLogin(loginGoogleDto: LoginGoogleDto) {
+  async googleLogin(loginGoogleDto: LoginGoogleDto, language: string) {
     const { idToken } = loginGoogleDto;
+    const invalidGoogleTokenFormatMessage = this.i18nService.t(
+      'auth.invalid_google_token_format',
+      language as any,
+    );
+
+    const invalidGoogleTokenMessage = this.i18nService.t(
+      'auth.invalid_google_token',
+      language as any,
+    );
+
+    const googleAccountNoEmailMessage = this.i18nService.t(
+      'auth.google_account_no_email',
+      language as any,
+    );
 
     if (!idToken || idToken.split('.').length !== 3) {
-      throw new UnauthorizedException('Invalid Google token format');
+      throw new UnauthorizedException(invalidGoogleTokenFormatMessage);
     }
 
     let payload;
@@ -178,13 +192,13 @@ export class AuthService {
       payload = await verifyGoogleToken(idToken);
     } catch (error) {
       this.logger.warn(`Google token verification failed: ${error}`);
-      throw new UnauthorizedException('Invalid Google token');
+      throw new UnauthorizedException(invalidGoogleTokenMessage);
     }
 
     const { email, name } = payload;
 
     if (!email) {
-      throw new UnauthorizedException('Google account has no email');
+      throw new UnauthorizedException(googleAccountNoEmailMessage);
     }
 
     let user = await this.userRepository.findOneBy({ email });
@@ -207,11 +221,25 @@ export class AuthService {
     };
   }
 
-  async appleLogin(loginAppleDto: LoginAppleDto) {
+  async appleLogin(loginAppleDto: LoginAppleDto, language: string) {
     const { idToken } = loginAppleDto;
+    const invalidAppleTokenFormatMessage = this.i18nService.t(
+      'auth.invalid_apple_token_format',
+      language as any,
+    );
+
+    const invalidAppleTokenMessage = this.i18nService.t(
+      'auth.invalid_apple_token',
+      language as any,
+    );
+
+    const accountRegisteredWithAnotherMethodMessage = this.i18nService.t(
+      'auth.account_registered_with_another_method',
+      language as any,
+    );
 
     if (!idToken || idToken.split('.').length !== 3) {
-      throw new UnauthorizedException('Invalid Apple token format');
+      throw new UnauthorizedException(invalidAppleTokenFormatMessage);
     }
 
     const decoded = await verifyAppleToken(idToken);
@@ -219,7 +247,7 @@ export class AuthService {
     const { email, sub } = decoded;
 
     if (!sub) {
-      throw new UnauthorizedException('Invalid Apple token');
+      throw new UnauthorizedException(invalidAppleTokenMessage);
     }
 
     const safeEmail = email ?? `${sub}@apple.com`;
@@ -230,7 +258,7 @@ export class AuthService {
 
     if (user && user.provider !== 'apple') {
       throw new UnauthorizedException(
-        'This account is registered with another method',
+        accountRegisteredWithAnotherMethodMessage,
       );
     }
 
@@ -254,10 +282,11 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(email: string, ip: string) {
-    const response = {
-      message: 'Si el correo está registrado, recibirás instrucciones',
-    };
+  async forgotPassword(email: string, ip: string, language: string) {
+    const forgotPasswordSentMessage = this.i18nService.t(
+      'auth.forgot_password_sent',
+      language as any,
+    );
 
     const remoteIp = ip || 'unknown';
     this.checkForgotPasswordRateLimit(remoteIp);
@@ -273,7 +302,7 @@ export class AuthService {
     });
 
     if (!user || user.provider !== 'local') {
-      return response;
+      return forgotPasswordSentMessage;
     }
 
     const code = Math.floor(100000 + Math.random() * 900000)
@@ -288,7 +317,7 @@ export class AuthService {
     await this.userRepository.save(user);
     await this.mailService.sendResetPasswordEmail(user.email, code);
 
-    return response;
+    return forgotPasswordSentMessage;
   }
 
   async resetPassword(
@@ -296,7 +325,16 @@ export class AuthService {
     code: string,
     password: string,
     ip: string,
+    language: string,
   ) {
+    const reseCodeInvalidExpiredMessage = this.i18nService.t(
+      'auth.reset_code_invalid_or_expired',
+      language as any,
+    );
+    const passwordUpdatedSuccessMessage = this.i18nService.t(
+      'auth.password_updated_successfully',
+      language as any,
+    );
     const remoteIp = ip || 'unknown';
     this.checkResetPasswordRateLimit(remoteIp, email);
 
@@ -316,7 +354,7 @@ export class AuthService {
       },
     });
 
-    const error = new UnauthorizedException('Código inválido o expirado');
+    const error = new UnauthorizedException(reseCodeInvalidExpiredMessage);
 
     if (!user || user.provider !== 'local') {
       throw error;
@@ -351,7 +389,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return {
-      message: 'Contraseña actualizada correctamente',
+      message: passwordUpdatedSuccessMessage,
     };
   }
 }
