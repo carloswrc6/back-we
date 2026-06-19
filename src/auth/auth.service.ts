@@ -28,6 +28,8 @@ export class AuthService {
   private static readonly LOGIN_WINDOW_MS = 15 * 60 * 1000;
   private static readonly REGISTER_LIMIT = 5;
   private static readonly REGISTER_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly SOCIAL_LOGIN_LIMIT = 10;
+  private static readonly SOCIAL_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
   constructor(
     @InjectRepository(User)
@@ -80,6 +82,14 @@ export class AuthService {
       `register-ip:${ip}`,
       AuthService.REGISTER_LIMIT,
       AuthService.REGISTER_WINDOW_MS,
+    );
+  }
+
+  private checkSocialLoginRateLimit(ip: string) {
+    this.rateLimiterService.consume(
+      `social-login-ip:${ip}`,
+      AuthService.SOCIAL_LOGIN_LIMIT,
+      AuthService.SOCIAL_LOGIN_WINDOW_MS,
     );
   }
 
@@ -184,7 +194,10 @@ export class AuthService {
     };
   }
 
-  async googleLogin(loginGoogleDto: LoginGoogleDto, language: string) {
+  async googleLogin(loginGoogleDto: LoginGoogleDto, language: string, ip: string) {
+    const remoteIp = ip || 'unknown';
+    this.checkSocialLoginRateLimit(remoteIp);
+
     const { idToken } = loginGoogleDto;
     const invalidGoogleTokenFormatMessage = this.i18nService.t(
       'auth.invalid_google_token_format',
@@ -239,7 +252,10 @@ export class AuthService {
     };
   }
 
-  async appleLogin(loginAppleDto: LoginAppleDto, language: string) {
+  async appleLogin(loginAppleDto: LoginAppleDto, language: string, ip: string) {
+    const remoteIp = ip || 'unknown';
+    this.checkSocialLoginRateLimit(remoteIp);
+
     const { idToken } = loginAppleDto;
     const invalidAppleTokenFormatMessage = this.i18nService.t(
       'auth.invalid_apple_token_format',
@@ -352,8 +368,12 @@ export class AuthService {
   async verifyResetCode(
     email: string,
     code: string,
+    ip: string,
     language: string,
   ) {
+    const remoteIp = ip || 'unknown';
+    this.checkResetPasswordRateLimit(remoteIp, email);
+
     const reseCodeInvalidExpiredMessage = this.i18nService.t(
       'auth.reset_code_invalid_or_expired',
       language as any,

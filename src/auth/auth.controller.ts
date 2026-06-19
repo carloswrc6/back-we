@@ -43,18 +43,28 @@ export class AuthController {
 
   @Post('google')
   googleAuth(
+    @Req() req: Request,
     @Body() loginGoogleDto: LoginGoogleDto,
     @GetLanguage() language: string,
   ) {
-    return this.authService.googleLogin(loginGoogleDto, language);
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.googleLogin(loginGoogleDto, language, ip);
   }
 
   @Post('apple')
   appleAuth(
+    @Req() req: Request,
     @Body() loginAppleDto: LoginAppleDto,
     @GetLanguage() language: string,
   ) {
-    return this.authService.appleLogin(loginAppleDto, language);
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.appleLogin(loginAppleDto, language, ip);
   }
 
   @Post('forgot-password')
@@ -72,10 +82,15 @@ export class AuthController {
 
   @Post('verify-reset-code')
   verifyResetCode(
+    @Req() req: Request,
     @Body() dto: VerifyResetCodeDto,
     @GetLanguage() language: string,
   ) {
-    return this.authService.verifyResetCode(dto.email, dto.code, language);
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.verifyResetCode(dto.email, dto.code, ip, language);
   }
 
   @Post('reset-password')
