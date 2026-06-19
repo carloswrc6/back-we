@@ -12,6 +12,7 @@ import { LoginAppleDto } from './dto/login-apple.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GetLanguage } from 'src/common/decorators/get-language.decorator';
+import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -67,6 +68,14 @@ export class AuthController {
       typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
 
     return this.authService.forgotPassword(dto.email, ip, language);
+  }
+
+  @Post('verify-reset-code')
+  verifyResetCode(
+    @Body() dto: VerifyResetCodeDto,
+    @GetLanguage() language: string,
+  ) {
+    return this.authService.verifyResetCode(dto.email, dto.code, language);
   }
 
   @Post('reset-password')

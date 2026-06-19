@@ -349,6 +349,59 @@ export class AuthService {
     return forgotPasswordSentMessage;
   }
 
+  async verifyResetCode(
+    email: string,
+    code: string,
+    language: string,
+  ) {
+    const reseCodeInvalidExpiredMessage = this.i18nService.t(
+      'auth.reset_code_invalid_or_expired',
+      language as any,
+    );
+
+    const hashedCode = createHash('sha256').update(code).digest('hex');
+
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: {
+        id: true,
+        resetPasswordCode: true,
+        resetPasswordExpires: true,
+        resetPasswordAttempts: true,
+        email: true,
+        provider: true,
+      },
+    });
+
+    const error = new UnauthorizedException(reseCodeInvalidExpiredMessage);
+
+    if (!user || user.provider !== 'local') {
+      throw error;
+    }
+
+    if (
+      !user.resetPasswordCode ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires < new Date()
+    ) {
+      await this.registerFailedResetAttempt(user);
+      throw error;
+    }
+
+    const storedHash = Buffer.from(user.resetPasswordCode, 'hex');
+    const receivedHash = Buffer.from(hashedCode, 'hex');
+    const isValidCode =
+      storedHash.length === receivedHash.length &&
+      timingSafeEqual(storedHash, receivedHash);
+
+    if (!isValidCode) {
+      await this.registerFailedResetAttempt(user);
+      throw error;
+    }
+
+    return { message: 'Code verified successfully' };
+  }
+
   async resetPassword(
     email: string,
     code: string,
