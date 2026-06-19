@@ -19,16 +19,25 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  createUser(@Body() createUserDto: CreateUserDto) {
-    return this.authService.create(createUserDto);
+  createUser(@Req() req: Request, @Body() createUserDto: CreateUserDto) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.create(createUserDto, ip);
   }
 
   @Post('login')
   loginUser(
+    @Req() req: Request,
     @Body() loginUserDto: LoginUserDto,
     @GetLanguage() language: string,
   ) {
-    return this.authService.login(loginUserDto, language);
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.login(loginUserDto, language, ip);
   }
 
   @Post('google')
@@ -45,12 +54,6 @@ export class AuthController {
     @GetLanguage() language: string,
   ) {
     return this.authService.appleLogin(loginAppleDto, language);
-  }
-
-  @Get('check-status')
-  @Auth()
-  checkAuthStatus(@GetUser() user: User) {
-    return this.authService.checkAuthStatus(user);
   }
 
   @Post('forgot-password')

@@ -1,8 +1,8 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 
 import * as bcrypt from 'bcrypt';
 
@@ -24,6 +24,10 @@ export class AuthService {
   private readonly logger = new Logger('AuthService');
   private static readonly FORGOT_PASSWORD_LIMIT = 5;
   private static readonly FORGOT_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly LOGIN_LIMIT = 10;
+  private static readonly LOGIN_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly REGISTER_LIMIT = 5;
+  private static readonly REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
   constructor(
     @InjectRepository(User)
@@ -63,27 +67,39 @@ export class AuthService {
     }
   }
 
-  private registerFailedResetAttempt(user: User) {
+  private checkLoginRateLimit(ip: string) {
+    this.rateLimiterService.consume(
+      `login-ip:${ip}`,
+      AuthService.LOGIN_LIMIT,
+      AuthService.LOGIN_WINDOW_MS,
+    );
+  }
+
+  private checkRegisterRateLimit(ip: string) {
+    this.rateLimiterService.consume(
+      `register-ip:${ip}`,
+      AuthService.REGISTER_LIMIT,
+      AuthService.REGISTER_WINDOW_MS,
+    );
+  }
+
+  private async registerFailedResetAttempt(user: User) {
     user.resetPasswordAttempts = (user.resetPasswordAttempts || 0) + 1;
 
     if (user.resetPasswordAttempts >= AuthService.FORGOT_PASSWORD_LIMIT) {
-      user.resetPasswordToken = null;
+      user.resetPasswordCode = null;
       user.resetPasswordExpires = null;
       user.resetPasswordAttempts = 0;
     }
 
-    this.userRepository.save(user);
+    await this.userRepository.save(user);
   }
 
-  async checkAuthStatus(user: User) {
-    return {
-      ...user,
-      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
-    };
-  }
-
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto, ip: string) {
     try {
+      const remoteIp = ip || 'unknown';
+      this.checkRegisterRateLimit(remoteIp);
+
       const { password, ...userData } = createUserDto;
 
       const user = this.userRepository.create({
@@ -107,8 +123,10 @@ export class AuthService {
     }
   }
 
-  async login(loginUserDto: LoginUserDto, language: string) {
-    console.log('language', language);
+  async login(loginUserDto: LoginUserDto, language: string, ip: string) {
+    const remoteIp = ip || 'unknown';
+    this.checkLoginRateLimit(remoteIp);
+
     const emailNotRegisteredMessage = this.i18nService.t(
       'auth.email_not_registered',
       language as any,
@@ -290,6 +308,11 @@ export class AuthService {
 
     const remoteIp = ip || 'unknown';
     this.checkForgotPasswordRateLimit(remoteIp);
+    this.rateLimiterService.consume(
+      `forgot-email:${email}`,
+      AuthService.FORGOT_PASSWORD_LIMIT,
+      AuthService.FORGOT_PASSWORD_WINDOW_MS,
+    );
 
     const user = await this.userRepository.findOne({
       where: { email },
@@ -297,7 +320,7 @@ export class AuthService {
         id: true,
         email: true,
         provider: true,
-        resetPasswordToken: true,
+        resetPasswordCode: true,
       },
     });
 
@@ -305,17 +328,23 @@ export class AuthService {
       return forgotPasswordSentMessage;
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000)
-      .toString()
-      .padStart(6, '0');
+    const code = randomInt(100000, 999999).toString();
     const hashedCode = createHash('sha256').update(code).digest('hex');
 
-    user.resetPasswordToken = hashedCode;
+    user.resetPasswordCode = hashedCode;
     user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
     user.resetPasswordAttempts = 0;
 
     await this.userRepository.save(user);
-    await this.mailService.sendResetPasswordEmail(user.email, code);
+
+    try {
+      await this.mailService.sendResetPasswordEmail(user.email, code);
+    } catch {
+      user.resetPasswordCode = null;
+      user.resetPasswordExpires = null;
+      await this.userRepository.save(user);
+      throw new InternalServerErrorException('Failed to send reset email');
+    }
 
     return forgotPasswordSentMessage;
   }
@@ -345,7 +374,7 @@ export class AuthService {
       select: {
         id: true,
         password: true,
-        resetPasswordToken: true,
+        resetPasswordCode: true,
         resetPasswordExpires: true,
         resetPasswordAttempts: true,
         tokenVersion: true,
@@ -361,27 +390,27 @@ export class AuthService {
     }
 
     if (
-      !user.resetPasswordToken ||
+      !user.resetPasswordCode ||
       !user.resetPasswordExpires ||
       user.resetPasswordExpires < new Date()
     ) {
-      this.registerFailedResetAttempt(user);
+      await this.registerFailedResetAttempt(user);
       throw error;
     }
 
-    const storedHash = Buffer.from(user.resetPasswordToken, 'hex');
+    const storedHash = Buffer.from(user.resetPasswordCode, 'hex');
     const receivedHash = Buffer.from(hashedCode, 'hex');
     const isValidCode =
       storedHash.length === receivedHash.length &&
       timingSafeEqual(storedHash, receivedHash);
 
     if (!isValidCode) {
-      this.registerFailedResetAttempt(user);
+      await this.registerFailedResetAttempt(user);
       throw error;
     }
 
     user.password = bcrypt.hashSync(password, 10);
-    user.resetPasswordToken = null;
+    user.resetPasswordCode = null;
     user.resetPasswordExpires = null;
     user.resetPasswordAttempts = 0;
     user.tokenVersion = (user.tokenVersion || 0) + 1;

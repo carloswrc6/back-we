@@ -8,8 +8,6 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from './entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { Plan } from 'src/subscription/entities/plan.entity';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
 import { MailModule } from 'src/mail/mail.module';
 import { CommonModule } from 'src/common/common.module';
 
@@ -19,7 +17,7 @@ import { CommonModule } from 'src/common/common.module';
   imports: [
     ConfigModule,
 
-    TypeOrmModule.forFeature([User, Plan, Subscription]),
+    TypeOrmModule.forFeature([User]),
 
     PassportModule.register({ defaultStrategy: 'jwt' }),
 

@@ -3,11 +3,9 @@ import {
   BeforeUpdate,
   Column,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Product } from '../../products/entities';
-import { Subscription } from 'src/subscription/entities/subscription.entity';
+
 
 @Entity('users')
 export class User {
@@ -49,7 +47,7 @@ export class User {
     nullable: true,
     select: false,
   })
-  resetPasswordToken?: string;
+  resetPasswordCode?: string;
 
   @Column({
     nullable: true,
@@ -66,12 +64,6 @@ export class User {
     default: 0,
   })
   tokenVersion: number;
-
-  @OneToMany(() => Product, (product) => product.user)
-  product: Product;
-
-  @OneToMany(() => Subscription, (subscription) => subscription.user)
-  subscriptions: Subscription[];
 
   @BeforeInsert()
   checkFieldsBeforeInsert() {
