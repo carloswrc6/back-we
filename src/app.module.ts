@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { FoodsModule } from './food/food.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { CountriesModule } from './countries/countries.module';
+import { DishesModule } from './dishes/dishes.module';
 
 @Module({
   imports: [
@@ -27,9 +28,10 @@ import { MailModule } from './mail/mail.module';
     // }),
 
     AuthModule,
-    FoodsModule,
     CommonModule,
     MailModule,
+    CountriesModule,
+    DishesModule,
   ],
 })
 export class AppModule {}

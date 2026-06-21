@@ -19,5 +19,37 @@
     "reset_code_invalid_or_expired": "Código inválido o expirado",
 
     "password_updated_successfully": "Contraseña actualizada correctamente"
+  },
+  "meal_types": {
+    "breakfast": "Desayuno",
+    "lunch": "Almuerzo",
+    "dinner": "Cena"
+  },
+  "dishes": {
+    "created": "Plato creado exitosamente",
+    "updated": "Plato actualizado exitosamente",
+    "not_found": "Plato no encontrado"
+  },
+  "countries": {
+    "ar": "Argentina",
+    "bo": "Bolivia",
+    "br": "Brasil",
+    "cl": "Chile",
+    "co": "Colombia",
+    "cr": "Costa Rica",
+    "cu": "Cuba",
+    "do": "República Dominicana",
+    "ec": "Ecuador",
+    "sv": "El Salvador",
+    "gt": "Guatemala",
+    "hn": "Honduras",
+    "mx": "México",
+    "ni": "Nicaragua",
+    "pa": "Panamá",
+    "py": "Paraguay",
+    "pe": "Perú",
+    "pr": "Puerto Rico",
+    "uy": "Uruguay",
+    "ve": "Venezuela"
   }
 }

@@ -19,5 +19,37 @@
     "reset_code_invalid_or_expired": "Invalid or expired code",
 
     "password_updated_successfully": "Password updated successfully"
+  },
+  "meal_types": {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner"
+  },
+  "dishes": {
+    "created": "Dish created successfully",
+    "updated": "Dish updated successfully",
+    "not_found": "Dish not found"
+  },
+  "countries": {
+    "ar": "Argentina",
+    "bo": "Bolivia",
+    "br": "Brazil",
+    "cl": "Chile",
+    "co": "Colombia",
+    "cr": "Costa Rica",
+    "cu": "Cuba",
+    "do": "Dominican Republic",
+    "ec": "Ecuador",
+    "sv": "El Salvador",
+    "gt": "Guatemala",
+    "hn": "Honduras",
+    "mx": "Mexico",
+    "ni": "Nicaragua",
+    "pa": "Panama",
+    "py": "Paraguay",
+    "pe": "Peru",
+    "pr": "Puerto Rico",
+    "uy": "Uruguay",
+    "ve": "Venezuela"
   }
 }
