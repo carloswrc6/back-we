@@ -142,7 +142,6 @@ export class DishesService implements OnModuleInit {
       ...rest,
       name: language === 'en' && nameEn ? nameEn : rest.name,
       ingredients: language === 'en' && ingredientsEn?.length ? ingredientsEn : rest.ingredients,
-      mealType: this.i18nService.t(`meal_types.${rest.mealType}`, language as any),
     };
   }
 }
