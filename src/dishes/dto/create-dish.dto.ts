@@ -28,13 +28,14 @@ export class CreateDishDto {
   @MinLength(1)
   nameEn?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dish image URL',
     example: 'https://example.com/ceviche.jpg',
   })
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  image: string;
+  image?: string;
 
   @ApiProperty({
     description: 'List of ingredients in Spanish',
@@ -67,4 +68,13 @@ export class CreateDishDto {
   })
   @IsUUID()
   countryId: string;
+
+  @ApiPropertyOptional({
+    description: 'Difficulty level',
+    example: 'easy',
+    enum: ['easy', 'medium', 'hard'],
+  })
+  @IsOptional()
+  @IsString()
+  difficulty?: string;
 }

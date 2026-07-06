@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   JoinColumn,
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MealType } from 'src/common/enums/meal-type';
 import { Country } from 'src/countries/entities/country.entity';
 
@@ -67,4 +67,11 @@ export class Dish {
   })
   @Column('uuid')
   countryId: string;
+
+  @ApiPropertyOptional({
+    example: 'easy',
+    description: 'Difficulty level: easy, medium, hard',
+  })
+  @Column('text', { nullable: true })
+  difficulty: string;
 }

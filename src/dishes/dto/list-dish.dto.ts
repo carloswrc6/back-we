@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsEnum } from 'class-validator';
+import { IsOptional, IsUUID, IsEnum, IsString } from 'class-validator';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { MealType } from 'src/common/enums/meal-type';
 
@@ -18,4 +18,12 @@ export class ListDishDto extends PaginationDto {
   @IsOptional()
   @IsEnum(MealType)
   mealType?: MealType;
+
+  @ApiPropertyOptional({
+    description: 'Filter by difficulty',
+    enum: ['easy', 'medium', 'hard'],
+  })
+  @IsOptional()
+  @IsString()
+  difficulty?: string;
 }

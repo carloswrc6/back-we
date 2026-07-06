@@ -45,6 +45,7 @@ export class DishesService implements OnModuleInit {
       const countryDishes = dishesSeed[country.code];
       if (!countryDishes) continue;
 
+      const difficulties = ['easy', 'medium', 'hard'];
       for (const dish of countryDishes) {
         const newDish = this.dishRepository.create({
           name: dish.name,
@@ -54,6 +55,7 @@ export class DishesService implements OnModuleInit {
           ingredientsEn: dish.ingredientsEn,
           mealType: dish.mealType as MealType,
           countryId: country.id,
+          difficulty: dish.difficulty ?? difficulties[Math.floor(Math.random() * 3)],
         });
         dishesToCreate.push(newDish);
       }
@@ -67,6 +69,7 @@ export class DishesService implements OnModuleInit {
     try {
       const { nameEn, ingredientsEn, ...rest } = createDishDto;
       const dish = this.dishRepository.create({
+        image: '',
         ...rest,
         ...(nameEn && { nameEn }),
         ...(ingredientsEn && { ingredientsEn }),
@@ -82,11 +85,12 @@ export class DishesService implements OnModuleInit {
   }
 
   async findAll(listDishDto: ListDishDto, language: string) {
-    const { limit = 10, offset = 0, countryId, mealType } = listDishDto;
+    const { limit = 10, offset = 0, countryId, mealType, difficulty } = listDishDto;
 
     const where: any = {};
     if (countryId) where.countryId = countryId;
     if (mealType) where.mealType = mealType;
+    if (difficulty) where.difficulty = difficulty;
 
     const [dishes, total] = await this.dishRepository.findAndCount({
       take: limit,
