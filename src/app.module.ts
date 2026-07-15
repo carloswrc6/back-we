@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { CountriesModule } from './countries/countries.module';
 import { DishesModule } from './dishes/dishes.module';
+import { AvoidReasonsModule } from './avoid-reasons/avoid-reasons.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { DishesModule } from './dishes/dishes.module';
     MailModule,
     CountriesModule,
     DishesModule,
+    AvoidReasonsModule,
   ],
 })
 export class AppModule {}
