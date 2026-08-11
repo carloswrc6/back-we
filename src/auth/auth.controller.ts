@@ -5,7 +5,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { GetUser, Auth } from './decorators';
 
-import { CreateUserDto, LoginUserDto } from './dto';
+import { CreateUserDto, LoginUserDto, RefreshTokenDto } from './dto';
 import { User } from './entities/user.entity';
 import { LoginGoogleDto } from './dto/login-google.dto';
 import { LoginAppleDto } from './dto/login-apple.dto';
@@ -39,6 +39,18 @@ export class AuthController {
       typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
 
     return this.authService.login(loginUserDto, language, ip);
+  }
+
+  @Post('refresh')
+  refresh(
+    @Req() req: Request,
+    @Body() dto: RefreshTokenDto,
+  ) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip;
+
+    return this.authService.refresh(dto.refreshToken, ip);
   }
 
   @Post('google')

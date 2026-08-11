@@ -30,6 +30,9 @@ export class AuthService {
   private static readonly REGISTER_WINDOW_MS = 15 * 60 * 1000;
   private static readonly SOCIAL_LOGIN_LIMIT = 10;
   private static readonly SOCIAL_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly REFRESH_LIMIT = 30;
+  private static readonly REFRESH_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly REFRESH_TOKEN_EXPIRES_IN = '30d';
 
   constructor(
     @InjectRepository(User)
@@ -43,6 +46,35 @@ export class AuthService {
   private getJwtToken(payload: JwtPayload) {
     const token = this.jwtService.sign(payload);
     return token;
+  }
+
+  private getRefreshToken(payload: JwtPayload) {
+    return this.jwtService.sign(
+      { ...payload, type: 'refresh' },
+      { expiresIn: AuthService.REFRESH_TOKEN_EXPIRES_IN },
+    );
+  }
+
+  private issueTokens(user: User) {
+    return {
+      token: this.getJwtToken({
+        id: user.id,
+        tokenVersion: user.tokenVersion,
+        type: 'access',
+      }),
+      refreshToken: this.getRefreshToken({
+        id: user.id,
+        tokenVersion: user.tokenVersion,
+      }),
+    };
+  }
+
+  private checkRefreshRateLimit(ip: string) {
+    this.rateLimiterService.consume(
+      `refresh-ip:${ip}`,
+      AuthService.REFRESH_LIMIT,
+      AuthService.REFRESH_WINDOW_MS,
+    );
   }
 
   private checkForgotPasswordRateLimit(ip: string) {
@@ -122,10 +154,7 @@ export class AuthService {
 
       return {
         ...user,
-        token: this.getJwtToken({
-          id: user.id,
-          tokenVersion: user.tokenVersion,
-        }),
+        ...this.issueTokens(user),
       };
       // TODO: Retornar el JWT de acceso
     } catch (error) {
@@ -190,7 +219,7 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
+      ...this.issueTokens(user),
     };
   }
 
@@ -248,7 +277,7 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
+      ...this.issueTokens(user),
     };
   }
 
@@ -312,7 +341,7 @@ export class AuthService {
 
     return {
       ...rest,
-      token: this.getJwtToken({ id: user.id, tokenVersion: user.tokenVersion }),
+      ...this.issueTokens(user),
     };
   }
 
@@ -492,6 +521,45 @@ export class AuthService {
 
     return {
       message: passwordUpdatedSuccessMessage,
+    };
+  }
+
+  async refresh(refreshToken: string, ip: string) {
+    const remoteIp = ip || 'unknown';
+    this.checkRefreshRateLimit(remoteIp);
+
+    let payload: JwtPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: payload.id },
+      select: {
+        id: true,
+        tokenVersion: true,
+        isActive: true,
+        email: true,
+        fullName: true,
+        provider: true,
+      },
+    });
+
+    if (!user || user.tokenVersion !== payload.tokenVersion || !user.isActive) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const { password: _, ...rest } = user;
+
+    return {
+      ...rest,
+      ...this.issueTokens(user),
     };
   }
 }

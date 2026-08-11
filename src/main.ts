@@ -23,11 +23,14 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
 
+  if (process.env.NODE_ENV !== 'production') {
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
-  await app.listen(process.env.PORT);
-  logger.log(`App running on port http://localhost:${ process.env.PORT }/api`);
+  app.enableCors();
+  await app.listen(process.env.PORT, '0.0.0.0');
+  logger.log(`App running on http://0.0.0.0:${ process.env.PORT }/api`);
 }
 bootstrap();

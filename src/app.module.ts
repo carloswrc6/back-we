@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +15,8 @@ import { AvoidReasonsModule } from './avoid-reasons/avoid-reasons.module';
   imports: [
     ConfigModule.forRoot(),
 
+    ThrottlerModule.forRoot({ ttl: 60000, limit: 120 }),
+
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -24,16 +28,18 @@ import { AvoidReasonsModule } from './avoid-reasons/avoid-reasons.module';
       synchronize: true,
     }),
 
-    // ServeStaticModule.forRoot({
-    //   rootPath: join(__dirname,'..','public'), 
-    // }),
-
     AuthModule,
     CommonModule,
     MailModule,
     CountriesModule,
     DishesModule,
     AvoidReasonsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
